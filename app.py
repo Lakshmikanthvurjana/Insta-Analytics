@@ -1,40 +1,42 @@
 import streamlit as st
 import pandas as pd
 import json
-import os
 
-st.title("Instagram Analytics Dashboard")
+st.title("Instagram Chat Analytics Dashboard")
 
-# Path to your Instagram messages data
-DATA_DIR = "your_instagram_activity/messages/inbox"  # Update this if your path is different
+uploaded_files = st.file_uploader(
+    "Upload your Instagram message JSON files (from inbox folders)", 
+    type="json", 
+    accept_multiple_files=True
+)
 
-def load_messages(data_dir):
+if uploaded_files:
     messages = []
-    for folder in os.listdir(data_dir):
-        folder_path = os.path.join(data_dir, folder)
-        if os.path.isdir(folder_path):
-            for file in os.listdir(folder_path):
-                if file.startswith("message") and file.endswith(".json"):
-                    with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                        messages.extend(data.get("messages", []))
-    return pd.DataFrame(messages)
+    for uploaded_file in uploaded_files:
+        data = json.load(uploaded_file)
+        messages.extend(data.get("messages", []))
+    if messages:
+        df = pd.DataFrame(messages)
+        st.write(f"Total messages: {len(df)}")
+        st.write(df.head())
 
-df = load_messages(DATA_DIR)
+        # Convert timestamp to datetime
+        df['date'] = pd.to_datetime(df['timestamp_ms'], unit='ms')
+        df['day'] = df['date'].dt.date
+        df['hour'] = df['date'].dt.hour
 
-if not df.empty:
-    st.write(f"Total messages: {len(df)}")
-    st.write(df.head())
+        # Messages per day
+        st.subheader("Messages per Day")
+        st.line_chart(df.groupby('day').size())
 
-    # Number of messages per sender
-    sender_counts = df['sender_name'].value_counts()
-    st.subheader("Messages per Sender")
-    st.bar_chart(sender_counts)
+        # Messages per hour
+        st.subheader("Messages by Hour of Day")
+        st.bar_chart(df.groupby('hour').size())
 
-    # Messages over time
-    df['date'] = pd.to_datetime(df['timestamp_ms'], unit='ms')
-    messages_per_day = df.groupby(df['date'].dt.date).size()
-    st.subheader("Messages Over Time")
-    st.line_chart(messages_per_day)
+        # Top senders
+        st.subheader("Top Senders")
+        st.bar_chart(df['sender_name'].value_counts().head(10))
+    else:
+        st.warning("No messages found in uploaded files.")
 else:
-    st.warning("No messages found. Please check your data path.")
+    st.info("Please upload your Instagram message JSON files.")
