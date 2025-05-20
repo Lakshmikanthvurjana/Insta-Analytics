@@ -9,6 +9,7 @@ st.title("Instagram Chat Analytics Dashboard")
 data_dir = st.text_input(
     "Enter the path to your Instagram 'inbox' folder (e.g., C:/Users/YourName/Downloads/instagram-data/messages/inbox):"
 )
+st.write(f"DEBUG: Path entered: '{data_dir}'")  # <-- No indentation here
 
 def load_messages(data_dir):
     messages = []
